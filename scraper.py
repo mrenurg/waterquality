@@ -5,11 +5,18 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 import paho.mqtt.client as mqtt
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 
 
 WATERPLANT_URL = os.environ.get("WATERPLANT_URL", "https://mitdrikkevand.dk/waterplants/49809")
-MQTT_HOST = os.environ["MQTT_HOST"]
+MQTT_HOST = os.environ.get("MQTT_HOST")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
+if not MQTT_HOST:
+    raise ValueError("MQTT_HOST is missing. Set it in .env or environment.")
 MQTT_TOPIC = os.environ.get("MQTT_TOPIC", "waterquality/frederiksberg_soroe/state")
 MQTT_USERNAME = os.environ.get("MQTT_USERNAME")
 MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD")
@@ -24,6 +31,9 @@ TARGETS = [
     "Ammonium (NH4)",
     "Nitrit (NO2)",
 ]
+
+print("MQTT_HOST raw repr:", repr(os.environ.get("MQTT_HOST")))
+print("MQTT_PORT raw repr:", repr(os.environ.get("MQTT_PORT")))
 
 def normalized_text(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
