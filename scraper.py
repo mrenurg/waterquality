@@ -32,9 +32,6 @@ TARGETS = [
     "Nitrit (NO2)",
 ]
 
-print("MQTT_HOST raw repr:", repr(os.environ.get("MQTT_HOST")))
-print("MQTT_PORT raw repr:", repr(os.environ.get("MQTT_PORT")))
-
 def normalized_text(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
     # Flad tekst gør det nemt at regex'e stabilt (så længe ordene eksisterer)
@@ -56,21 +53,25 @@ def extract_param(text: str, name: str):
     return {"value": value, "unit": unit, "date": date}
 
 def publish(payload: dict):
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    if MQTT_USERNAME:
-        client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD or "")
+    try:
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        if MQTT_USERNAME:
+            client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD or "")
 
-    if MQTT_TLS:
-        client.tls_set()  # bruger system CA bundle (ok til public CA / korrekt CA i image)
+        if MQTT_TLS:
+            client.tls_set()
 
-    client.connect(MQTT_HOST, MQTT_PORT, 60)
-    client.loop_start()
-    msg = json.dumps(payload, ensure_ascii=False)
-    info = client.publish(MQTT_TOPIC, msg, qos=MQTT_QOS, retain=MQTT_RETAIN)
-    info.wait_for_publish()
-    client.loop_stop()
-    client.disconnect()
-
+        client.connect(MQTT_HOST, MQTT_PORT, 60)
+        client.loop_start()
+        msg = json.dumps(payload, ensure_ascii=False)
+        info = client.publish(MQTT_TOPIC, msg, qos=MQTT_QOS, retain=MQTT_RETAIN)
+        info.wait_for_publish()
+        client.loop_stop()
+        client.disconnect()
+    except Exception as e:
+        print(f"ERROR publishing to MQTT host={MQTT_HOST} port={MQTT_PORT} topic={MQTT_TOPIC}: {e}")
+        raise
+    
 def main():
     r = requests.get(WATERPLANT_URL, timeout=30)
     r.raise_for_status()
